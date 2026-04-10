@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "esnext"],
+    "jsx": "react",
+    "moduleResolution": "node",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

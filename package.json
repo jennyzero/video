@@ -1,0 +1,21 @@
+{
+  "name": "remotion-project",
+  "version": "0.0.1",
+  "description": "My Remotion video",
+  "keywords": [],
+  "scripts": {
+    "start": "npx remotion studio",
+    "build": "npx remotion render",
+    "upgrade": "npx remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.447",
+    "remotion": "4.0.447"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
