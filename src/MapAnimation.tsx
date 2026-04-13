@@ -7,20 +7,30 @@ import worldData from 'world-atlas/countries-110m.json';
 const W = 1920;
 const H = 1080;
 
-// Natural Earth projection centred slightly south so Africa/Europe don't clip
+// ─── 3-colour palette (light / high-tech) ────────────────────
+const C_BG     = '#eef4f9'; // ocean + background
+const C_LAND   = '#cfdee9'; // land masses
+const C_ACCENT = '#0369a1'; // arrows, markers, labels, borders
+// ─────────────────────────────────────────────────────────────
+
+// ─── Projection: South Korea at exact screen centre ──────────
+// Step 1 – temporary proj to measure Korea's raw screen offset
+const _tmpProj = geoNaturalEarth1()
+	.rotate([-127.7, 0])
+	.scale(265)
+	.translate([0, 0]);
+const _kr = (_tmpProj([127.7, 35.9]) ?? [0, 0]) as [number, number];
+
+// Step 2 – final proj that places Korea dead-centre
 const projection = geoNaturalEarth1()
-	.scale(255)
-	.translate([W / 2, H / 2 + 40]);
+	.rotate([-127.7, 0])
+	.scale(265)
+	.translate([W / 2 - _kr[0], H / 2 - _kr[1]]);
 
 const pathGen = geoPath(projection);
+// ─────────────────────────────────────────────────────────────
 
 type Coord = [number, number];
-
-// 3-colour palette ─────────────────────────────────────────────
-const C_BG = '#07111f';   // deep navy   (ocean + background)
-const C_LAND = '#0d1e38'; // dark blue   (land masses)
-const C_ACCENT = '#38bdf8'; // sky cyan  (all interactive elements)
-// ──────────────────────────────────────────────────────────────
 
 const SOURCE: Coord = [127.7, 35.9]; // South Korea
 
@@ -31,43 +41,47 @@ const ROUTES: {
 	coord: Coord;
 	start: number;
 	dur: number;
-	labelOffset: [number, number];
+	labelOffset: [number, number]; // [dx, dy] relative to destination dot
 }[] = [
+	// Japan: just ~10° east of Korea → appears slightly right of centre
 	{
 		key: 'jp',
 		label: 'Japan',
 		flag: '🇯🇵',
 		coord: [138, 36],
-		start: 15,
-		dur: 28,
-		labelOffset: [12, -12],
+		start: 20,
+		dur: 55,
+		labelOffset: [12, -13],
 	},
+	// India: ~50° west of Korea → appears moderately left
 	{
 		key: 'in',
 		label: 'India',
 		flag: '🇮🇳',
 		coord: [78, 22],
-		start: 22,
-		dur: 42,
-		labelOffset: [-142, -12],
+		start: 55,
+		dur: 80,
+		labelOffset: [-150, -13],
 	},
+	// USA: ~134° east via Pacific → far right on Korea-centred map
 	{
 		key: 'us',
 		label: 'United States',
 		flag: '🇺🇸',
 		coord: [-98, 38],
-		start: 30,
-		dur: 58,
-		labelOffset: [12, -12],
+		start: 90,
+		dur: 100,
+		labelOffset: [-200, -13],
 	},
+	// Mexico: ~131° east via Pacific → far right, just below USA
 	{
 		key: 'mx',
 		label: 'Mexico',
 		flag: '🇲🇽',
 		coord: [-102, 24],
-		start: 38,
-		dur: 52,
-		labelOffset: [12, 18],
+		start: 110,
+		dur: 90,
+		labelOffset: [-158, 18],
 	},
 ];
 
@@ -84,7 +98,7 @@ function arcPath(from: Coord, to: Coord): string | null {
 	const dist = Math.hypot(x2 - x1, y2 - y1);
 	const mx = (x1 + x2) / 2;
 	const my = (y1 + y2) / 2;
-	const lift = Math.min(dist * 0.3, 190);
+	const lift = Math.min(dist * 0.28, 200);
 	return `M${x1},${y1} Q${mx},${my - lift} ${x2},${y2}`;
 }
 
@@ -93,7 +107,7 @@ function arrowTip(
 	cpy: number,
 	x2: number,
 	y2: number,
-	size: number
+	size: number,
 ): string {
 	const angle = Math.atan2(y2 - cpy, x2 - cpx);
 	const spread = 0.42;
@@ -129,8 +143,8 @@ const Arc: React.FC<{
 	const cpx = qMatch ? parseFloat(qMatch[1]) : (src[0] + x2) / 2;
 	const cpy = qMatch ? parseFloat(qMatch[2]) : (src[1] + y2) / 2;
 
-	// Faint dashed guide appears just before the arc starts
-	const guideOpacity = interpolate(frame, [start - 8, start + 8], [0, 0.18], {
+	// Faint dashed guide appears just before animation starts
+	const guideOpacity = interpolate(frame, [start - 10, start + 12], [0, 0.22], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
@@ -142,26 +156,26 @@ const Arc: React.FC<{
 		easing: ease,
 	});
 
-	// Destination dot / arrowhead appears
-	const dotProg = interpolate(frame, [start + dur, start + dur + 10], [0, 1], {
+	// Destination marker appear
+	const dotProg = interpolate(frame, [start + dur, start + dur + 12], [0, 1], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 		easing: ease,
 	});
 
-	// Label fades in after dot
-	const labelFade = interpolate(frame, [start + dur + 6, start + dur + 20], [0, 1], {
+	// Label fade in
+	const labelFade = interpolate(frame, [start + dur + 8, start + dur + 24], [0, 1], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
 
-	// Continuous pulse ring after destination reached
+	// Continuous pulse ring after arc completes
 	const afterDone = Math.max(0, frame - (start + dur));
-	const ringT = afterDone % 48;
-	const ringR = interpolate(ringT, [0, 48], [4, 20]);
-	const ringOp = interpolate(ringT, [0, 28, 48], [0.55, 0, 0]);
+	const ringT = afterDone % 52;
+	const ringR = interpolate(ringT, [0, 52], [4, 20]);
+	const ringOp = interpolate(ringT, [0, 30, 52], [0.5, 0, 0]);
 
-	const arrowOpacity = interpolate(frame, [start + dur * 0.8, start + dur], [0, 1], {
+	const arrowOpacity = interpolate(frame, [start + dur * 0.82, start + dur], [0, 1], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
@@ -176,22 +190,22 @@ const Arc: React.FC<{
 				d={d}
 				fill="none"
 				stroke={C_ACCENT}
-				strokeWidth={0.8}
-				strokeDasharray="5 5"
+				strokeWidth={0.9}
+				strokeDasharray="6 5"
 				opacity={guideOpacity}
 			/>
 
-			{/* Animated glowing arc */}
+			{/* Animated arc */}
 			<path
 				d={d}
 				fill="none"
 				stroke={C_ACCENT}
-				strokeWidth={1.4}
+				strokeWidth={1.5}
 				strokeLinecap="round"
 				pathLength={1}
 				strokeDasharray="1"
 				strokeDashoffset={1 - arcProg}
-				style={{filter: `drop-shadow(0 0 4px ${C_ACCENT}bb)`}}
+				style={{filter: `drop-shadow(0 0 3px ${C_ACCENT}66)`}}
 			/>
 
 			{/* Arrowhead */}
@@ -199,7 +213,6 @@ const Arc: React.FC<{
 				points={pts}
 				fill={C_ACCENT}
 				opacity={arrowOpacity}
-				style={{filter: `drop-shadow(0 0 3px ${C_ACCENT})`}}
 			/>
 
 			{/* Pulse ring */}
@@ -221,21 +234,21 @@ const Arc: React.FC<{
 				cy={y2}
 				r={4 * dotProg}
 				fill={C_ACCENT}
-				style={{filter: `drop-shadow(0 0 7px ${C_ACCENT})`}}
 			/>
 
-			{/* Flag + country name */}
+			{/* Flag + country name label */}
 			<text
 				x={x2 + lx}
 				y={y2 + ly}
-				fill="#d0ecfc"
-				fontSize={17}
+				fill="#0c3a60"
+				fontSize={16}
 				fontFamily="'Segoe UI', system-ui, Arial, sans-serif"
-				fontWeight="500"
+				fontWeight="600"
 				opacity={labelFade}
-				style={{filter: `drop-shadow(0 0 6px ${C_ACCENT}55)`}}
 			>
-				{flag}{'  '}{label}
+				{flag}
+				{'  '}
+				{label}
 			</text>
 		</g>
 	);
@@ -262,24 +275,27 @@ export const MapAnimation: React.FC = () => {
 	const titleOpacity = interpolate(frame, [0, 22], [0, 1], {extrapolateRight: 'clamp'});
 
 	return (
-		<AbsoluteFill style={{background: C_BG, fontFamily: "'Segoe UI', system-ui, sans-serif"}}>
+		<AbsoluteFill
+			style={{background: C_BG, fontFamily: "'Segoe UI', system-ui, sans-serif"}}
+		>
 			<svg
 				width={W}
 				height={H}
 				viewBox={`0 0 ${W} ${H}`}
 				style={{position: 'absolute', inset: 0}}
 			>
-				{/* Ocean */}
+				{/* Ocean / background */}
 				<rect width={W} height={H} fill={C_BG} />
 
-				{/* Land masses — 2-colour: fill + border */}
+				{/* Land masses */}
 				{countryPaths.map(({id, d}) => (
 					<path
 						key={id}
 						d={d}
 						fill={C_LAND}
-						stroke="#132844"
-						strokeWidth={0.45}
+						stroke={C_ACCENT}
+						strokeWidth={0.35}
+						strokeOpacity={0.3}
 					/>
 				))}
 
@@ -299,17 +315,17 @@ export const MapAnimation: React.FC = () => {
 					/>
 				))}
 
-				{/* Source — South Korea */}
+				{/* Source marker — South Korea */}
 				<g opacity={globalFade}>
-					{/* Outer pulse ring */}
+					{/* Pulsing outer ring */}
 					<circle
 						cx={sx}
 						cy={sy}
 						r={srcPulse}
 						fill="none"
 						stroke={C_ACCENT}
-						strokeWidth={1}
-						opacity={0.38}
+						strokeWidth={1.2}
+						opacity={0.4}
 					/>
 					{/* Core dot */}
 					<circle
@@ -317,18 +333,16 @@ export const MapAnimation: React.FC = () => {
 						cy={sy}
 						r={5}
 						fill={C_ACCENT}
-						style={{filter: `drop-shadow(0 0 9px ${C_ACCENT})`}}
 					/>
 					{/* "South Korea" label */}
 					<text
-						x={sx + 11}
+						x={sx + 12}
 						y={sy + 5}
-						fill={C_ACCENT}
-						fontSize={15}
+						fill="#0c3a60"
+						fontSize={14}
 						fontFamily="'Segoe UI', system-ui, sans-serif"
-						fontWeight="600"
+						fontWeight="700"
 						letterSpacing="0.04em"
-						style={{filter: `drop-shadow(0 0 8px ${C_ACCENT}88)`}}
 					>
 						🇰🇷 South Korea
 					</text>
@@ -342,17 +356,30 @@ export const MapAnimation: React.FC = () => {
 					top: 38,
 					width: '100%',
 					textAlign: 'center',
-					color: '#d0ecfc',
-					fontSize: 32,
+					color: '#0c3a60',
+					fontSize: 30,
 					fontWeight: 600,
 					opacity: titleOpacity,
 					letterSpacing: '0.14em',
 					textTransform: 'uppercase',
-					textShadow: `0 0 22px ${C_ACCENT}77`,
 				}}
 			>
 				South Korea · Global Connections
 			</div>
+
+			{/* Subtle bottom rule */}
+			<div
+				style={{
+					position: 'absolute',
+					bottom: 32,
+					left: '50%',
+					transform: 'translateX(-50%)',
+					width: 120,
+					height: 1,
+					background: C_ACCENT,
+					opacity: titleOpacity * 0.35,
+				}}
+			/>
 		</AbsoluteFill>
 	);
 };
