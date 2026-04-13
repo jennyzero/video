@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.447",
+    "@remotion/google-fonts": "^4.0.448",
+    "@remotion/transitions": "^4.0.448",
     "remotion": "4.0.447"
   },
   "devDependencies": {
