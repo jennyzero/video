@@ -49,29 +49,29 @@ const ROUTES: {
 }[] = [
 	// ── close destinations ──────────────────────────────────
 	// Japan: ~10° east → slightly right of Korea on map
-	{key: 'jp', label: 'Japan',      flag: '🇯🇵', coord: [138,   36  ], start:  15, dur:  42, labelOffset: [ 12, -13]},
-	// Vietnam: ~20° west → just left-below Korea
-	{key: 'vn', label: 'Vietnam',    flag: '🇻🇳', coord: [108,   14  ], start:  28, dur:  42, labelOffset: [ 12,  14]},
-	// Thailand: ~27° west → slightly left-below Korea
-	{key: 'th', label: 'Thailand',   flag: '🇹🇭', coord: [101,   15  ], start:  42, dur:  48, labelOffset: [-138, -14]},
+	{key: 'jp', label: 'Japan',      flag: '🇯🇵', coord: [138,   36  ], start:  15, dur:  42, labelOffset: [ 10, -14]},
+	// Vietnam: ~20° west → just left-below Korea (label right to avoid Thailand)
+	{key: 'vn', label: 'Vietnam',    flag: '🇻🇳', coord: [108,   14  ], start:  28, dur:  42, labelOffset: [ 10,  14]},
+	// Thailand: ~27° west → close to Vietnam; label left to separate from it
+	{key: 'th', label: 'Thailand',   flag: '🇹🇭', coord: [101,   15  ], start:  42, dur:  48, labelOffset: [-10, -14]},
 
 	// ── medium destinations ──────────────────────────────────
-	// India: ~50° west → moderately left
-	{key: 'in', label: 'India',      flag: '🇮🇳', coord: [ 78,   22  ], start:  58, dur:  65, labelOffset: [-148, -13]},
-	// Uzbekistan: ~65° west → left of centre
-	{key: 'uz', label: 'Uzbekistan', flag: '🇺🇿', coord: [ 63,   41  ], start:  72, dur:  65, labelOffset: [ 12, -12]},
+	// India: ~50° west → label left (avoids Thailand to the right)
+	{key: 'in', label: 'India',      flag: '🇮🇳', coord: [ 78,   22  ], start:  58, dur:  65, labelOffset: [-10, -12]},
+	// Uzbekistan: ~65° west → label right (Turkey is to its left)
+	{key: 'uz', label: 'Uzbekistan', flag: '🇺🇿', coord: [ 63,   41  ], start:  72, dur:  65, labelOffset: [ 10, -12]},
 
 	// ── far destinations ─────────────────────────────────────
-	// Turkey: ~93° west → far left
-	{key: 'tr', label: 'Turkey',     flag: '🇹🇷', coord: [ 35,   39  ], start:  88, dur:  75, labelOffset: [-118, -12]},
-	// Slovakia: ~108° west → very far left
-	{key: 'sk', label: 'Slovakia',   flag: '🇸🇰', coord: [ 19.5, 48.7], start: 105, dur:  80, labelOffset: [ 12, -20]},
+	// Turkey: ~93° west → label left (Uzbekistan is to its right)
+	{key: 'tr', label: 'Turkey',     flag: '🇹🇷', coord: [ 35,   39  ], start:  88, dur:  75, labelOffset: [-10, -12]},
+	// Slovakia: ~108° west → label right (avoids screen edge)
+	{key: 'sk', label: 'Slovakia',   flag: '🇸🇰', coord: [ 19.5, 48.7], start: 105, dur:  80, labelOffset: [ 10, -18]},
 
 	// ── trans-Pacific (appear on right side of Korea-centred map) ──
-	// USA: ~134° east via Pacific → far right
-	{key: 'us', label: 'United States', flag: '🇺🇸', coord: [-98, 38], start: 120, dur:  95, labelOffset: [-205, -13]},
-	// Mexico: ~131° east via Pacific → far right just below USA
-	{key: 'mx', label: 'Mexico',     flag: '🇲🇽', coord: [-102, 24  ], start: 138, dur:  90, labelOffset: [-158,  18]},
+	// USA: ~134° east via Pacific → label right (well within 1920 px)
+	{key: 'us', label: 'United States', flag: '🇺🇸', coord: [-98, 38], start: 120, dur:  95, labelOffset: [ 10, -12]},
+	// Mexico: ~131° east via Pacific → label right, offset down to clear USA
+	{key: 'mx', label: 'Mexico',     flag: '🇲🇽', coord: [-102, 24  ], start: 138, dur:  90, labelOffset: [ 10,  14]},
 ];
 
 function project(coord: Coord): [number, number] | null {
@@ -210,7 +210,7 @@ const Arc: React.FC<{
 			{/* Destination dot */}
 			<circle cx={x2} cy={y2} r={4 * dotProg} fill={C_ACCENT} />
 
-			{/* Flag + country name */}
+			{/* Flag + country name — textAnchor derived from offset direction */}
 			<text
 				x={x2 + lx}
 				y={y2 + ly}
@@ -218,6 +218,7 @@ const Arc: React.FC<{
 				fontSize={14}
 				fontFamily="'Segoe UI', system-ui, Arial, sans-serif"
 				fontWeight="600"
+				textAnchor={lx < 0 ? 'end' : 'start'}
 				opacity={labelFade}
 			>
 				{flag}{'  '}{label}
