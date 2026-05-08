@@ -1,6 +1,11 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, interpolate} from 'remotion';
+import {loadFont} from '@remotion/google-fonts/Inter';
 import {Background} from './components/Background';
+
+// Eagerly load Inter (300, 400, 500, 600, 700) so all panels render
+// with the correct typography from frame 0.
+loadFont('normal', {weights: ['300', '400', '500', '600', '700']});
 import {WorldMap} from './components/WorldMap';
 import {FactoryPanels} from './components/FactoryPanels';
 import {EmailPanels} from './components/EmailPanels';

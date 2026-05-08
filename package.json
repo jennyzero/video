@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.447",
+    "@remotion/google-fonts": "4.0.447",
     "d3-geo": "^3.1.1",
     "remotion": "4.0.447",
     "topojson-client": "^3.1.0",
